@@ -36,6 +36,8 @@ def generate_provenance(build_info_path: str, post_build_path: str, output_file:
     with open(post_build_path, "rb") as f:
         post_build = json.load(f)
 
+    if build_info_path is None:
+        build_info_path = post_build["Build info path"]
     with open(build_info_path, "rb") as f:
         build_info = json.load(f)
 
@@ -85,8 +87,8 @@ def main():
         prog="Provenance Converter",
         description="Convert hydra build_info into provenance SLSA 1.0",
     )
-    parser.add_argument("build_info_path")
     parser.add_argument("post_build_path")
+    parser.add_argument("build_info_path", default=None)
     parser.add_argument("-o", "--output_path")
     args = parser.parse_args()
     generate_provenance(args.build_info_path, args.output_path or "provenance.json")
