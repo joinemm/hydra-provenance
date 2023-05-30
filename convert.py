@@ -11,13 +11,14 @@ def parse_subjects(products: list[dict]) -> list[dict]:
             "name": product["name"],
             "uri": product["path"],
             "digest": {
-                "sha256": product["sha256hash"] or get_hash(product["path"]),
+                "sha256": product["sha256hash"]  # or get_hash(product["path"]),
             },
         }
         for product in products
     ]
 
 
+# TODO: use nix-hash because image is a directory
 def resolve_build_dependencies(sbom_path: str | None):
     if sbom_path is None:
         return []
