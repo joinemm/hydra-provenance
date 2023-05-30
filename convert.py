@@ -37,7 +37,7 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
         post_build = json.load(f)
 
     if build_info_path is None:
-        build_info_path = post_build["Build info path"]
+        build_info_path = post_build["Postbuild info"]
     with open(build_info_path, "rb") as f:
         build_info = json.load(f)
 
