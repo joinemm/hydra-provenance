@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 import argparse
+import hashlib
 
 
 def parse_subjects(products: list[dict]) -> list[dict]:
@@ -8,7 +9,9 @@ def parse_subjects(products: list[dict]) -> list[dict]:
         {
             "name": product["name"],
             "uri": product["path"],
-            "digest": {"sha256": product["sha256hash"]},
+            "digest": {
+                "sha256": product["sha256hash"] or calculate_sha256(product["path"])
+            },
         }
         for product in products
     ]
@@ -30,6 +33,16 @@ BUILDER_DEPENDENCIES = [
         "digest": {"gitCommit": "6f86bd49556217e699af6e4e3100015e2791e879"},
     },
 ]
+
+
+def calculate_sha256(filename: str):
+    sha256_hash = hashlib.sha256()
+    with open(filename, "rb") as f:
+        # Read and update hash string value in blocks of 4K
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+
+    return sha256_hash.hexdigest()
 
 
 def generate_provenance(post_build_path: str, build_info_path: str, output_file: str):
@@ -73,7 +86,9 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
                         build_info["stopTime"]
                     ).isoformat(),
                 },
-                "byproducts": [],
+                "byproducts": [
+                    {"name": output_file},
+                ],
             },
         },
     }
@@ -91,7 +106,9 @@ def main():
     parser.add_argument("--buildinfo")
     parser.add_argument("-o", "--output_path")
     args = parser.parse_args()
-    generate_provenance(args.post_build_path, args.buildinfo, args.output_path or "provenance.json")
+    generate_provenance(
+        args.post_build_path, args.buildinfo, args.output_path or "provenance.json"
+    )
 
 
 if __name__ == "__main__":
