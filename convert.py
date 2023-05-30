@@ -35,22 +35,23 @@ BUILDER_DEPENDENCIES = [
 def generate_provenance(build_info_path: str, output_file: str):
     with open(build_info_path, "rb") as f:
         build_info = json.load(f)
+        postbuild = build_info["Postbuild info"]
 
     schema = {
         "_type": "https://in-toto.io/Statement/v1",
-        "subject": parse_subjects(build_info["products"]),
+        "subject": parse_subjects(postbuild["products"]),
         "predicateType": "https://slsa.dev/provenance/v1",
         "predicate": {
             "buildDefinition": {
                 "buildType": BUILD_TYPE_DOCUMENT,
                 "externalParameters": {},
                 "internalParameters": {
-                    # "server": build_info["server"],
-                    "system": build_info["system"],
-                    "jobset": build_info["jobset"],
-                    "project": build_info["project"],
-                    "job": build_info["job"],
-                    "drvPath": build_info["drvPath"],
+                    "server": build_info["Server"],
+                    "system": postbuild["System"],
+                    "jobset": postbuild["Jobset"],
+                    "project": postbuild["Project"],
+                    "job": postbuild["Job"],
+                    "drvPath": postbuild["Derivation store path"],
                 },
                 "resolvedDependencies": resolve_build_dependencies(),
             },
@@ -60,12 +61,12 @@ def generate_provenance(build_info_path: str, output_file: str):
                     "builderDependencies": BUILDER_DEPENDENCIES,
                 },
                 "metadata": {
-                    "invocationId": build_info["build"],
+                    "invocationId": postbuild["Build ID"],
                     "startedOn": datetime.fromtimestamp(
-                        build_info["startTime"]
+                        postbuild["startTime"]
                     ).isoformat(),
                     "finishedOn": datetime.fromtimestamp(
-                        build_info["stopTime"]
+                        postbuild["stopTime"]
                     ).isoformat(),
                 },
                 "byproducts": [],
@@ -82,10 +83,10 @@ def main():
         prog="Provenance Converter",
         description="Convert hydra postbuild into provenance SLSA 1.0",
     )
-    parser.add_argument("post_build_path")
+    parser.add_argument("build_info_path")
     parser.add_argument("-o", "--output_path")
     args = parser.parse_args()
-    generate_provenance(args.post_build_path, args.output_path or "provenance.json")
+    generate_provenance(args.build_info_path, args.output_path or "provenance.json")
 
 
 if __name__ == "__main__":
