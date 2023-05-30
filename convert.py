@@ -88,10 +88,10 @@ def main():
         description="Convert hydra build_info into provenance SLSA 1.0",
     )
     parser.add_argument("post_build_path")
-    parser.add_argument("build_info_path", default=None)
+    parser.add_argument("--buildinfo")
     parser.add_argument("-o", "--output_path")
     args = parser.parse_args()
-    generate_provenance(args.build_info_path, args.output_path or "provenance.json")
+    generate_provenance(args.post_build_path, args.buildinfo, args.output_path or "provenance.json")
 
 
 if __name__ == "__main__":
