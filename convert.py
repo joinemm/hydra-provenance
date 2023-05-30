@@ -51,11 +51,11 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
                 "externalParameters": {},
                 "internalParameters": {
                     "server": post_build["Server"],
-                    "system": build_info["System"],
-                    "jobset": build_info["Jobset"],
-                    "project": build_info["Project"],
-                    "job": build_info["Job"],
-                    "drvPath": build_info["Derivation store path"],
+                    "system": post_build["System"],
+                    "jobset": post_build["Jobset"],
+                    "project": post_build["Project"],
+                    "job": post_build["Job"],
+                    "drvPath": post_build["Derivation store path"],
                 },
                 "resolvedDependencies": resolve_build_dependencies(),
             },
@@ -65,7 +65,7 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
                     "builderDependencies": BUILDER_DEPENDENCIES,
                 },
                 "metadata": {
-                    "invocationId": build_info["Build ID"],
+                    "invocationId": post_build["Build ID"],
                     "startedOn": datetime.fromtimestamp(
                         build_info["startTime"]
                     ).isoformat(),
