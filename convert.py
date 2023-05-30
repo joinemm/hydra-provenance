@@ -77,7 +77,7 @@ def generate_provenance(
     with open(post_build_path, "rb") as f:
         post_build = json.load(f)
 
-    with open(build_info_path or post_build["Postbuild Info"], "rb") as f:
+    with open(build_info_path or post_build["Postbuild info"], "rb") as f:
         build_info = json.load(f)
 
     build_id = post_build["Build ID"]
