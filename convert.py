@@ -32,7 +32,7 @@ BUILDER_DEPENDENCIES = [
 ]
 
 
-def generate_provenance(build_info_path: str, post_build_path: str, output_file: str):
+def generate_provenance(post_build_path: str, build_info_path: str, output_file: str):
     with open(post_build_path, "rb") as f:
         post_build = json.load(f)
 
