@@ -1,7 +1,8 @@
-import json
-from datetime import datetime
 import argparse
 import hashlib
+import json
+from datetime import datetime
+from typing import Optional
 
 
 def parse_subjects(products: list[dict]) -> list[dict]:
@@ -10,32 +11,43 @@ def parse_subjects(products: list[dict]) -> list[dict]:
             "name": product["name"],
             "uri": product["path"],
             "digest": {
-                "sha256": product["sha256hash"] or calculate_sha256(product["path"])
+                "sha256": product["sha256hash"] or get_hash(product["path"]),
             },
         }
         for product in products
     ]
 
 
-def resolve_build_dependencies():
-    return []
+def resolve_build_dependencies(sbom_path: str | None):
+    if sbom_path is None:
+        return []
+    with open(sbom_path, "rb") as f:
+        sbom = json.load(f)
+    return [
+        {
+            "name": component["name"],
+            "uri": component["bom-ref"],
+        }
+        for component in sbom["components"]
+    ]
 
 
+WEBSERVER = "https://vedenemo.dev/files/build_reports/hydra2/"
 BUILD_TYPE_DOCUMENT = ""
 BUILD_ID_DOCUMENT = ""
 BUILDER_DEPENDENCIES = [
     {
         "uri": "git+https://github.com/tiiuae/ci-private",
-        "digest": {"gitCommit": "292ec26e630cb9bcf0915bfc5395ddd2a0b2c2f1"},
+        "digest": {"gitCommit": None},
     },
     {
         "uri": "git+https://github.com/tiiuae/ci-public",
-        "digest": {"gitCommit": "6f86bd49556217e699af6e4e3100015e2791e879"},
+        "digest": {"gitCommit": None},
     },
 ]
 
 
-def calculate_sha256(filename: str):
+def get_hash(filename: str):
     sha256_hash = hashlib.sha256()
     with open(filename, "rb") as f:
         # Read and update hash string value in blocks of 4K
@@ -45,15 +57,30 @@ def calculate_sha256(filename: str):
     return sha256_hash.hexdigest()
 
 
-def generate_provenance(post_build_path: str, build_info_path: str, output_file: str):
+def cached_file(build_id: int, filename: str, dir: str = ""):
+    return {
+        "name": filename,
+        "uri": f"{WEBSERVER}{build_id}/{dir}{filename}",
+    }
+
+
+def list_byproducts(build_id: int, files: list[str]):
+    return [cached_file(build_id, file) for file in files]
+
+
+def generate_provenance(
+    post_build_path: str,
+    build_info_path: Optional[str],
+    output_file: str,
+    sbom_path: Optional[str],
+):
     with open(post_build_path, "rb") as f:
         post_build = json.load(f)
 
-    if build_info_path is None:
-        build_info_path = post_build["Postbuild info"]
-    with open(build_info_path, "rb") as f:
+    with open(build_info_path or post_build["Postbuild Info"], "rb") as f:
         build_info = json.load(f)
 
+    build_id = post_build["Build ID"]
     schema = {
         "_type": "https://in-toto.io/Statement/v1",
         "subject": parse_subjects(build_info["products"]),
@@ -70,7 +97,7 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
                     "job": post_build["Job"],
                     "drvPath": post_build["Derivation store path"],
                 },
-                "resolvedDependencies": resolve_build_dependencies(),
+                "resolvedDependencies": resolve_build_dependencies(sbom_path),
             },
             "runDetails": {
                 "builder": {
@@ -78,7 +105,7 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
                     "builderDependencies": BUILDER_DEPENDENCIES,
                 },
                 "metadata": {
-                    "invocationId": post_build["Build ID"],
+                    "invocationId": build_id,
                     "startedOn": datetime.fromtimestamp(
                         build_info["startTime"]
                     ).isoformat(),
@@ -87,7 +114,16 @@ def generate_provenance(post_build_path: str, build_info_path: str, output_file:
                     ).isoformat(),
                 },
                 "byproducts": [
-                    {"name": output_file},
+                    list_byproducts(
+                        build_id,
+                        [
+                            output_file,
+                            f"sbom.runtime__{build_id}.csv",
+                            f"sbom.runtime__{build_id}.cdx.json",
+                            f"sbom.runtime__{build_id}.spdx.json",
+                            f"vulnix__{build_id}.txt",
+                        ],
+                    )
                 ],
             },
         },
@@ -104,10 +140,14 @@ def main():
     )
     parser.add_argument("post_build_path")
     parser.add_argument("--buildinfo")
+    parser.add_argument("--sbom")
     parser.add_argument("-o", "--output_path")
     args = parser.parse_args()
     generate_provenance(
-        args.post_build_path, args.buildinfo, args.output_path or "provenance.json"
+        args.post_build_path,
+        args.buildinfo,
+        args.output_path or "provenance.json",
+        args.sbom,
     )
 
 
