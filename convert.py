@@ -4,23 +4,23 @@
 
 import argparse
 import json
+import os
 import subprocess
 from datetime import datetime
 from typing import Optional
+import glob
 
-CACHE_URL = "https://vedenemo.dev/files/build_reports/hydra2/"
 
-
-def parse_subjects(products: list[dict]) -> list[dict]:
+def parse_subjects(output_store_path: str) -> list[dict]:
     return [
         {
-            "name": product["name"],
-            "uri": product["path"],
+            "name": file,
+            "uri": f"{output_store_path}/{file}",
             "digest": {
-                "sha256": product["sha256hash"] or get_hash(product["path"]),
+                "sha256": get_hash(f"{output_store_path}/{file}"),
             },
         }
-        for product in products
+        for file in glob.glob(output_store_path + '/*', recursive=True)
     ]
 
 
@@ -38,7 +38,6 @@ def resolve_build_dependencies(sbom_path: str | None):
     ]
 
 
-# TODO: use nix-hash because image is a directory
 def get_hash(image: str):
     out, err = subprocess.call(
         ["nix-hash", "--base32", "--type", "sha256", image],
@@ -47,21 +46,20 @@ def get_hash(image: str):
     return out
 
 
-def cached_file(build_id: int, filename: str, dir: str = ""):
-    return {
-        "name": filename,
-        "uri": f"{CACHE_URL}{build_id}/{dir}{filename}",
-    }
-
-
-def list_byproducts(build_id: int, files: list[str]):
-    return [cached_file(build_id, file) for file in files]
+def list_byproducts(resultsdir: str):
+    return [
+        {
+            "name": file,
+            "uri": f"{resultsdir}/{file}",
+        }
+        for file in os.listdir(resultsdir)
+    ]
 
 
 def generate_provenance(
     post_build_path: str,
     build_info_path: Optional[str],
-    output_file: str,
+    resultsdir: str,
     sbom_path: Optional[str],
 ):
     with open(post_build_path, "rb") as f:
@@ -116,23 +114,12 @@ def generate_provenance(
                         build_info["stopTime"]
                     ).isoformat(),
                 },
-                "byproducts": [
-                    list_byproducts(
-                        build_id,
-                        [
-                            output_file,
-                            f"sbom.runtime__{build_id}.csv",
-                            f"sbom.runtime__{build_id}.cdx.json",
-                            f"sbom.runtime__{build_id}.spdx.json",
-                            f"vulnix__{build_id}.txt",
-                        ],
-                    )
-                ],
+                "byproducts": [list_byproducts(resultsdir)],
             },
         },
     }
 
-    with open(output_file, "w") as f:
+    with open("provenance.json", "w") as f:
         f.write(json.dumps(schema, indent=4))
 
 
@@ -144,12 +131,12 @@ def main():
     parser.add_argument("post_build_path")
     parser.add_argument("--buildinfo")
     parser.add_argument("--sbom")
-    parser.add_argument("-o", "--output_path")
+    parser.add_argument("--results-dir")
     args = parser.parse_args()
     generate_provenance(
         args.post_build_path,
         args.buildinfo,
-        args.output_path or "provenance.json",
+        args.resultsdir,
         args.sbom,
     )
 
