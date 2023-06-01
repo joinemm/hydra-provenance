@@ -1,8 +1,14 @@
+# SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2023 Unikie
+# SPDX-License-Identifier: Apache-2.0
+
 import argparse
-import hashlib
 import json
+import subprocess
 from datetime import datetime
 from typing import Optional
+
+CACHE_URL = "https://vedenemo.dev/files/build_reports/hydra2/"
 
 
 def parse_subjects(products: list[dict]) -> list[dict]:
@@ -11,14 +17,13 @@ def parse_subjects(products: list[dict]) -> list[dict]:
             "name": product["name"],
             "uri": product["path"],
             "digest": {
-                "sha256": product["sha256hash"]  # or get_hash(product["path"]),
+                "sha256": product["sha256hash"] or get_hash(product["path"]),
             },
         }
         for product in products
     ]
 
 
-# TODO: use nix-hash because image is a directory
 def resolve_build_dependencies(sbom_path: str | None):
     if sbom_path is None:
         return []
@@ -33,35 +38,15 @@ def resolve_build_dependencies(sbom_path: str | None):
     ]
 
 
-WEBSERVER = "https://vedenemo.dev/files/build_reports/hydra2/"
-BUILD_TYPE_DOCUMENT = ""
-BUILD_ID_DOCUMENT = ""
-BUILDER_DEPENDENCIES = [
-    {
-        "uri": "git+https://github.com/tiiuae/ci-private",
-        "digest": {"gitCommit": None},
-    },
-    {
-        "uri": "git+https://github.com/tiiuae/ci-public",
-        "digest": {"gitCommit": None},
-    },
-]
-
-
-def get_hash(filename: str):
-    sha256_hash = hashlib.sha256()
-    with open(filename, "rb") as f:
-        # Read and update hash string value in blocks of 4K
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-
-    return sha256_hash.hexdigest()
+# TODO: use nix-hash because image is a directory
+def get_hash(image: str):
+    return subprocess.call(["nix-hash", "--base32", "--type", "sha256", image])
 
 
 def cached_file(build_id: int, filename: str, dir: str = ""):
     return {
         "name": filename,
-        "uri": f"{WEBSERVER}{build_id}/{dir}{filename}",
+        "uri": f"{CACHE_URL}{build_id}/{dir}{filename}",
     }
 
 
@@ -80,6 +65,19 @@ def generate_provenance(
 
     with open(build_info_path or post_build["Postbuild info"], "rb") as f:
         build_info = json.load(f)
+
+    BUILD_TYPE_DOCUMENT = ""
+    BUILD_ID_DOCUMENT = ""
+    BUILDER_DEPENDENCIES = [
+        {
+            "uri": "git+https://github.com/tiiuae/ci-private",
+            "digest": {"gitCommit": None},
+        },
+        {
+            "uri": "git+https://github.com/tiiuae/ci-public",
+            "digest": {"gitCommit": None},
+        },
+    ]
 
     build_id = post_build["Build ID"]
     schema = {
