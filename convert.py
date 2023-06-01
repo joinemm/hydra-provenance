@@ -44,14 +44,14 @@ def get_hash(image: str):
         ["nix-hash", "--base32", "--type", "sha256", image],
         stdout=subprocess.PIPE,
     ).communicate()
-    return out.decode()
+    return out.decode().strip()
 
 
 def list_byproducts(resultsdir: str):
     return [
         {
-            "name": file,
-            "uri": f"{resultsdir}/{file}",
+            "name": file.rsplit("/")[-1],
+            "uri": file,
         }
         for file in glob.glob(resultsdir + "/*", recursive=True)
     ]
