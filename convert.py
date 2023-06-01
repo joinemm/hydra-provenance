@@ -115,7 +115,9 @@ def generate_provenance(
             "runDetails": {
                 "builder": {
                     "id": BUILD_ID_DOCUMENT,
-                    "builderDependencies": builder_git_status(builder_workspace),
+                    "builderDependencies": [
+                        builder_git_status(builder_workspace),
+                    ],
                 },
                 "metadata": {
                     "invocationId": build_id,
