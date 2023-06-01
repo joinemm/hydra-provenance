@@ -39,12 +39,16 @@ def resolve_build_dependencies(sbom_path: str | None):
     ]
 
 
-def get_hash(image: str):
+def run_command(cmd: list[str]):
     out, err = subprocess.Popen(
-        ["nix-hash", "--base32", "--type", "sha256", image],
+        cmd,
         stdout=subprocess.PIPE,
     ).communicate()
     return out.decode().strip()
+
+
+def get_hash(image: str):
+    return run_command(["nix-hash", "--base32", "--type", "sha256", image])
 
 
 def list_byproducts(resultsdir: str):
@@ -57,11 +61,27 @@ def list_byproducts(resultsdir: str):
     ]
 
 
+def builder_git_status(workspace: str | None):
+    if workspace is None:
+        return []
+
+    url = run_command(["git", "remote", "get-url", "origin"])
+    commit_hash = run_command(["git", "rev-parse", "HEAD"])
+
+    return {
+        "uri": url,
+        "digest": {
+            "gitCommit": commit_hash,
+        },
+    }
+
+
 def generate_provenance(
     post_build_path: str,
     build_info_path: Optional[str],
     resultsdir: str,
     sbom_path: Optional[str],
+    builder_workspace: Optional[str],
 ):
     with open(post_build_path, "rb") as f:
         post_build = json.load(f)
@@ -69,18 +89,9 @@ def generate_provenance(
     with open(build_info_path or post_build["Postbuild info"], "rb") as f:
         build_info = json.load(f)
 
-    BUILD_TYPE_DOCUMENT = ""
-    BUILD_ID_DOCUMENT = ""
-    BUILDER_DEPENDENCIES = [
-        {
-            "uri": "git+https://github.com/tiiuae/ci-private",
-            "digest": {"gitCommit": None},
-        },
-        {
-            "uri": "git+https://github.com/tiiuae/ci-public",
-            "digest": {"gitCommit": None},
-        },
-    ]
+    BUILD_TYPE_DOCUMENT = "TODO"
+    BUILD_ID_DOCUMENT = "TODO"
+    WORKSPACE_DIR = ""
 
     build_id = post_build["Build ID"]
     schema = {
@@ -104,7 +115,7 @@ def generate_provenance(
             "runDetails": {
                 "builder": {
                     "id": BUILD_ID_DOCUMENT,
-                    "builderDependencies": BUILDER_DEPENDENCIES,
+                    "builderDependencies": builder_git_status(builder_workspace),
                 },
                 "metadata": {
                     "invocationId": build_id,
@@ -133,12 +144,14 @@ def main():
     parser.add_argument("--buildinfo")
     parser.add_argument("--sbom")
     parser.add_argument("--results-dir", default="./")
+    parser.add_argument("--builder-workspace")
     args = parser.parse_args()
     generate_provenance(
         args.post_build_path,
         args.buildinfo,
         args.results_dir,
         args.sbom,
+        args.builder_workspace,
     )
 
 
