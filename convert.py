@@ -70,24 +70,12 @@ def list_byproducts(resultsdir: str):
 
 
 def builder_git_rev(workspace: str | None):
-    if workspace is None:
-        return []
-
     url = run_command(
-        [
-            "git",
-            "remote",
-            "get-url",
-            "origin",
-        ],
+        ["git", "remote", "get-url", "origin"],
         cwd=workspace,
     )
     commit_hash = run_command(
-        [
-            "git",
-            "rev-parse",
-            "HEAD",
-        ],
+        ["git", "rev-parse", "HEAD"],
         cwd=workspace,
     )
 
