@@ -12,17 +12,24 @@ from typing import Optional
 
 
 def parse_subjects(output_store_paths: list[str]) -> list[dict]:
-    return [
-        {
-            "name": file,
-            "uri": f"{output_store_path}/{file}",
-            "digest": {
-                "sha256": get_hash(f"{output_store_path}/{file}"),
-            },
-        }
-        for output_store_path in output_store_paths
-        for file in os.listdir(output_store_path)
-    ]
+    subjects = []
+    for output_store in output_store_paths:
+        if os.path.exists(output_store):
+            subjects += [
+                {
+                    "name": file,
+                    "uri": f"{output_store}/{file}",
+                    "digest": {
+                        "sha256": get_hash(f"{output_store}/{file}"),
+                    },
+                }
+                for file in os.listdir(output_store)
+            ]
+
+        else:
+            subjects.append({"uri": output_store})
+
+    return subjects
 
 
 def resolve_build_dependencies(sbom_path: str | None):
@@ -84,12 +91,14 @@ def builder_git_status(workspace: str | None):
         cwd=workspace,
     )
 
-    return {
-        "uri": url,
-        "digest": {
-            "gitCommit": commit_hash,
-        },
-    }
+    return [
+        {
+            "uri": url,
+            "digest": {
+                "gitCommit": commit_hash,
+            },
+        }
+    ]
 
 
 def generate_provenance(
@@ -107,7 +116,6 @@ def generate_provenance(
 
     BUILD_TYPE_DOCUMENT = "TODO"
     BUILD_ID_DOCUMENT = "TODO"
-    WORKSPACE_DIR = ""
 
     build_id = post_build["Build ID"]
     schema = {
@@ -131,9 +139,7 @@ def generate_provenance(
             "runDetails": {
                 "builder": {
                     "id": BUILD_ID_DOCUMENT,
-                    "builderDependencies": [
-                        builder_git_status(builder_workspace),
-                    ],
+                    "builderDependencies": builder_git_status(builder_workspace),
                 },
                 "metadata": {
                     "invocationId": build_id,
@@ -149,7 +155,7 @@ def generate_provenance(
         },
     }
 
-    with open(f"{resultsdir}/provenance__{build_id}.json", "w") as f:
+    with open(f"{resultsdir}/slsa_provenance_{build_id}.json", "w") as f:
         f.write(json.dumps(schema, indent=4))
 
 
