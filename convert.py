@@ -69,7 +69,7 @@ def list_byproducts(resultsdir: str):
     ]
 
 
-def builder_git_status(workspace: str | None):
+def builder_git_rev(workspace: str | None):
     if workspace is None:
         return []
 
@@ -139,7 +139,7 @@ def generate_provenance(
             "runDetails": {
                 "builder": {
                     "id": BUILD_ID_DOCUMENT,
-                    "builderDependencies": builder_git_status(builder_workspace),
+                    "builderDependencies": builder_git_rev(builder_workspace),
                 },
                 "metadata": {
                     "invocationId": build_id,
