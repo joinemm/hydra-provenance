@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
+import glob
 import json
 import os
 import subprocess
 from datetime import datetime
 from typing import Optional
-import glob
 
 
 def parse_subjects(output_store_path: str) -> list[dict]:
@@ -20,7 +20,7 @@ def parse_subjects(output_store_path: str) -> list[dict]:
                 "sha256": get_hash(f"{output_store_path}/{file}"),
             },
         }
-        for file in glob.glob(output_store_path + '/*', recursive=True)
+        for file in os.listdir(output_store_path)
     ]
 
 
@@ -52,7 +52,7 @@ def list_byproducts(resultsdir: str):
             "name": file,
             "uri": f"{resultsdir}/{file}",
         }
-        for file in os.listdir(resultsdir)
+        for file in glob.glob(resultsdir + "/*", recursive=True)
     ]
 
 
