@@ -39,10 +39,11 @@ def resolve_build_dependencies(sbom_path: str | None):
     ]
 
 
-def run_command(cmd: list[str]):
+def run_command(cmd: list[str], **kwargs):
     out, err = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
+        **kwargs,
     ).communicate()
     return out.decode().strip()
 
@@ -67,24 +68,20 @@ def builder_git_status(workspace: str | None):
 
     url = run_command(
         [
-            "cd",
-            workspace,
-            "&&",
             "git",
             "remote",
             "get-url",
             "origin",
-        ]
+        ],
+        cwd=workspace,
     )
     commit_hash = run_command(
         [
-            "cd",
-            workspace,
-            "&&",
             "git",
             "rev-parse",
             "HEAD",
-        ]
+        ],
+        cwd=workspace,
     )
 
     return {
