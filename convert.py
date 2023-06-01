@@ -40,7 +40,11 @@ def resolve_build_dependencies(sbom_path: str | None):
 
 # TODO: use nix-hash because image is a directory
 def get_hash(image: str):
-    return subprocess.call(["nix-hash", "--base32", "--type", "sha256", image])
+    out, err = subprocess.call(
+        ["nix-hash", "--base32", "--type", "sha256", image],
+        stdout=subprocess.PIPE,
+    )
+    return out
 
 
 def cached_file(build_id: int, filename: str, dir: str = ""):
