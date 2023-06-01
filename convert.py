@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Optional
 
 
-def parse_subjects(output_store_path: str) -> list[dict]:
+def parse_subjects(output_store_paths: list[str]) -> list[dict]:
     return [
         {
             "name": file,
@@ -20,6 +20,7 @@ def parse_subjects(output_store_path: str) -> list[dict]:
                 "sha256": get_hash(f"{output_store_path}/{file}"),
             },
         }
+        for output_store_path in output_store_paths
         for file in os.listdir(output_store_path)
     ]
 
@@ -84,7 +85,7 @@ def generate_provenance(
     build_id = post_build["Build ID"]
     schema = {
         "_type": "https://in-toto.io/Statement/v1",
-        "subject": parse_subjects(build_info["products"]),
+        "subject": parse_subjects(post_build["Output store paths"]),
         "predicateType": "https://slsa.dev/provenance/v1",
         "predicate": {
             "buildDefinition": {
