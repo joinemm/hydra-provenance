@@ -129,7 +129,7 @@ def generate_provenance(
     }
 
     with open(output_file, "w") as f:
-        f.write(json.dumps(schema))
+        f.write(json.dumps(schema, indent=4))
 
 
 def main():
