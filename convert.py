@@ -40,11 +40,11 @@ def resolve_build_dependencies(sbom_path: str | None):
 
 
 def get_hash(image: str):
-    out, err = subprocess.call(
+    out, err = subprocess.Popen(
         ["nix-hash", "--base32", "--type", "sha256", image],
         stdout=subprocess.PIPE,
-    )
-    return out
+    ).communicate()
+    return out.decode()
 
 
 def list_byproducts(resultsdir: str):
@@ -120,7 +120,7 @@ def generate_provenance(
         },
     }
 
-    with open("provenance.json", "w") as f:
+    with open(f"{resultsdir}/provenance__{build_id}.json", "w") as f:
         f.write(json.dumps(schema, indent=4))
 
 
@@ -132,7 +132,7 @@ def main():
     parser.add_argument("post_build_path")
     parser.add_argument("--buildinfo")
     parser.add_argument("--sbom")
-    parser.add_argument("--results-dir")
+    parser.add_argument("--results-dir", default="./")
     args = parser.parse_args()
     generate_provenance(
         args.post_build_path,
