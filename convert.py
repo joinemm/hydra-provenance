@@ -65,8 +65,27 @@ def builder_git_status(workspace: str | None):
     if workspace is None:
         return []
 
-    url = run_command(["git", "remote", "get-url", "origin"])
-    commit_hash = run_command(["git", "rev-parse", "HEAD"])
+    url = run_command(
+        [
+            "cd",
+            workspace,
+            "&&",
+            "git",
+            "remote",
+            "get-url",
+            "origin",
+        ]
+    )
+    commit_hash = run_command(
+        [
+            "cd",
+            workspace,
+            "&&",
+            "git",
+            "rev-parse",
+            "HEAD",
+        ]
+    )
 
     return {
         "uri": url,
