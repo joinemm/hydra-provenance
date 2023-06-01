@@ -136,7 +136,7 @@ def main():
     generate_provenance(
         args.post_build_path,
         args.buildinfo,
-        args.resultsdir,
+        args.results_dir,
         args.sbom,
     )
 
